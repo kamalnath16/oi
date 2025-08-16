@@ -13,7 +13,9 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
-app.use(express.static('public'));
+
+// ✅ Serve static html/css/js/images from the project root
+app.use(express.static(__dirname));
 
 // Store active sessions (in production, use Redis or database)
 const activeSessions = new Map();
@@ -316,24 +318,18 @@ function generateStrikesAroundPrice(currentPrice, symbol) {
     const strikes = [];
     const step = symbol === 'BANKNIFTY' ? 100 : 50;
     const baseStrike = Math.round(currentPrice / step) * step;
-    
     for (let i = -15; i <= 15; i++) {
         strikes.push(baseStrike + (i * step));
     }
-    
     return strikes;
 }
 
 function formatExpiryForSymbol(expiry) {
-    // Convert YYYY-MM-DD to DDMMMYY format for Angel One symbols
     const date = new Date(expiry);
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-                   'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
     const day = date.getDate().toString().padStart(2, '0');
     const month = months[date.getMonth()];
     const year = date.getFullYear().toString().slice(-2);
-    
     return `${day}${month}${year}`;
 }
 
@@ -343,10 +339,7 @@ app.post('/api/logout', async (req, res) => {
         const { clientId } = req.body;
         const authToken = req.headers.authorization?.replace('Bearer ', '');
         
-        if (clientId) {
-            activeSessions.delete(clientId);
-        }
-
+        if (clientId) activeSessions.delete(clientId);
         if (authToken) {
             await axios.post(
                 'https://apiconnect.angelbroking.com/rest/secure/angelbroking/user/v1/logout',
@@ -360,20 +353,18 @@ app.post('/api/logout', async (req, res) => {
                         'X-SourceID': 'WEB'
                     }
                 }
-            ).catch(console.error); // Don't fail logout if API call fails
+            ).catch(console.error);
         }
-
-        res.json({
-            success: true,
-            message: 'Logged out successfully'
-        });
+        res.json({ success: true, message: 'Logged out successfully' });
     } catch (error) {
         console.error('Logout error:', error.message);
-        res.json({
-            success: true,
-            message: 'Logged out successfully'
-        });
+        res.json({ success: true, message: 'Logged out successfully' });
     }
+});
+
+// ✅ Serve index.html at root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Error handling middleware
